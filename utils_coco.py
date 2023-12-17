@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import pickle
 from tqdm import tqdm
 import json
+import shutil 
+import os
 
 # Opening JSON file
 f = open('config.json')
@@ -111,7 +113,6 @@ def get_polygons(image_name, dict_colours):
         lower = np.clip(BGR - intensity_range * 255, 0, 255)
         upper = np.clip(BGR + intensity_range * 255, 0, 255)
     
-
         # convert boundaries to NumPy arrays
         #lower = np.array(lower, dtype="uint8")
         #upper = np.array(upper, dtype="uint8")
@@ -146,18 +147,27 @@ def get_polygons(image_name, dict_colours):
             cv2.destroyAllWindows()
             """
 
-            list_poly.append([polygon_pixels.tolist(), 
-                            (x, y, w, h), 
-                            dict_colours[colour] + (contour_area,), 
-                            rotated_box.tolist()
+            list_poly.append([polygon_pixels.tolist(), #segmentation pixels
+                            (x, y, w, h), #bounding box
+                            dict_colours[colour] + (contour_area,), #mask color and total area in pixels
+                            rotated_box.tolist() # rotated bbox
                             ])
 
     return list_poly
 
 
-
+def check_object_number(image_path: str):
+    json_image_path = image_path[:-3] + 'json'
+    
+    with open(json_image_path) as f:
+        object_data = json.load(f)
+    
+    return(object_data["numberOfTargetsInFrame"] > 0)
     
 def get_segmentation():
+    failed_folder = os.path.join(OUTPUT_FOLDER, 'Failed_Images')
+    destination_folder_empty_images = os.path.join(config['output_folder'], "Empty_Images")
+    os.makedirs(failed_folder, exist_ok= True)
     """
     Get segmentation data for all images in a folder
 
@@ -181,15 +191,19 @@ def get_segmentation():
 
     list_failed = []
     for image in tqdm(images):
-        #object_in_images = check_object_number(image)
-        list_poly = get_polygons(image, dict_colours)
-        if list_poly:
-            dict_segmentation[image] = list_poly
-
-        else:
-            #dict_segmentation[image] = [[[0, 0], [1, 1]], (0, 0, 1, 1), (-1, 'None', 0.0), [[0,0], [0,1], [1,0], [1,1]]]
-            list_failed.append(image)
-            print("No Segmentation found in image " + str(image))
+        if check_object_number(image) > 0:
+            list_poly = get_polygons(image, dict_colours)
+            if list_poly:
+                dict_segmentation[image] = list_poly
+    
+            else: #although the image has objects, it failed to recognize them...
+                list_failed.append(image)
+                print("No Segmentation found in image " + str(image))
+                shutil.copy(image, os.path.join(failed_folder, os.path.basename(image)))
+                #remove failed images from output images folder
+                #remove from folder:
+                folder = os.path.join(OUTPUT_FOLDER, 'Images')
+                os.remove(os.path.join(folder, os.path.basename(image))) #removing failed images from output
         
     table = {'path_list': list_failed}
     with open(os.path.join(OUTPUT_FOLDER, 'failed_images.json'), 'w') as outfile:

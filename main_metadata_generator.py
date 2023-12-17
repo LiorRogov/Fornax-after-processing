@@ -178,7 +178,7 @@ def make_images(ue_dict):
 
 def get_image_data_with_no_objects(ue_dict):
     path_to_segmentation = config['path_to_segmentation']
-    images_folder = os.path.join(path_to_segmentation, "Images")
+    images_folder = os.path.join(path_to_segmentation, "Empty_Images")
 
     index = len(ue_dict.keys())
     list_images = []
@@ -291,31 +291,30 @@ def make_annotations(json_dict, ue_dict):
 
 def generate_data(ue_dict):
     """
-    Create json in Custom format for all images
+    Create json in Custom format for all images\
     """
-    json_dict = get_empty_json_format()
-    json_dict["objects"] = make_objects(ue_dict)
-    json_dict["images"] = make_images(ue_dict)
-    json_dict["annotations"] = make_annotations(json_dict, ue_dict)
-    #json_dict["models_list"] = make_model_list(ue_dict)
-
-    #create json for images with no objects
-    json_no_annotation_images =  get_empty_json_format(annotation = False)
-    
-    json_no_annotation_images["images"] = get_image_data_with_no_objects(ue_dict)
-    
     directory = config['output_folder']
     metadata_folder = "Metadata"
     final_directory= os.path.join(directory, metadata_folder)
     
     os.makedirs(final_directory, exist_ok= True)
 
-    # print(json.dumps(json_dict))
+    json_dict = get_empty_json_format()
+    json_dict["objects"] = make_objects(ue_dict)
+    json_dict["images"] = make_images(ue_dict)
+    json_dict["annotations"] = make_annotations(json_dict, ue_dict)
+    #json_dict["models_list"] = make_model_list(ue_dict)
+
+    #create json for images with no objects if there are images with no objects
+    if os.listdir(os.path.join(directory, "Empty_Images")):
+        json_no_annotation_images =  get_empty_json_format(annotation = False)
+        json_no_annotation_images["images"] = get_image_data_with_no_objects(ue_dict)
+       
+        with open(os.path.join(final_directory, 'images_with_no_objects.json'), 'w') as outfile:
+            json.dump(json_no_annotation_images, outfile, indent=4)
+        
     with open(os.path.join(final_directory, json_name), 'w') as outfile:
         json.dump(json_dict, outfile, indent=4)
-    
-    with open(os.path.join(final_directory, 'images_with_no_objects.json'), 'w') as outfile:
-        json.dump(json_no_annotation_images, outfile, indent=4)
 
     print(f"Exported Metadata json file in Simlat Fornax format to {os.path.join(final_directory, json_name)}")
 

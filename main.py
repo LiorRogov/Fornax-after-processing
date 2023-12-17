@@ -9,12 +9,7 @@ from tqdm import tqdm
 import numpy as np
 import cv2
 from shutil import copy
-
-
-# Opening JSON file
-f = open('config.json')
-# returns JSON object as 
-config = json.load(f)
+import subprocess
 
 def check_object_number(image_path: str):
     json_image_path = image_path[:-3] + 'json'
@@ -24,49 +19,43 @@ def check_object_number(image_path: str):
     
     return(object_data["numberOfTargetsInFrame"] > 0)
 
-
-def change_bit_depth(path_image):
-    if (check_object_number(path_image)):
-        rgba_image = cv2.imread(path_image, cv2.IMREAD_UNCHANGED)
-        # Load the RGBA image using OpenCV
-
-        gray_image = cv2.cvtColor(rgba_image, cv2.COLOR_RGBA2GRAY)
-        # Convert the RGBA image to grayscale (one band)
-
-        gray_image_16bit = (gray_image.astype(np.uint16) << 8)
-        # The line above left-shifts the 8-bit grayscale values by 8 bits to convert it to 16-bit.
-        # This effectively fills the additional 8 bits with zeros, expanding the bit depth.
-        
-        gray_image_16bit_pil = Image.fromarray(gray_image_16bit)
-        # Create a 16-bit grayscale image using PIL
-
-        destination_filepath = os.path.join(destination_folder, os.path.splitext(os.path.basename(path_image))[0] + '.png')
-        #creating file path in the 'destination folder'
-
-        #gray_image_16bit_pil.save(destination_filepath, "JPEG2000" , bits = 16)
-        gray_image_16bit_pil.save(destination_filepath, bits = 16) 
-        # This line saves the 16-bit grayscale image as a png file with 16 bits per sample.
-        # The "bits=16" argument ensures that the image is saved with a 16-bit depth.
+# Opening JSON file
+f = open('config.json')
+# returns JSON object as 
+config = json.load(f)
         
 
 
-    
 path_to_segmentation = config['path_to_segmentation']
 images_folder = os.path.join(path_to_segmentation, "Images")
 
 destination_folder = os.path.join(config['output_folder'], "Images")
 os.makedirs(destination_folder, exist_ok= True)
 
+destination_folder_empty_images = os.path.join(config['output_folder'], "Empty_Images")
+os.makedirs(destination_folder_empty_images, exist_ok= True)
+
+
 if config['imagery']['bit_depth']['change']:
     print (f"changing bit depth resolution to {config['imagery']['bit_depth']['value']}")
-    for path_image in tqdm(glob(images_folder + '\\*.png')):
-        change_bit_depth(path_image)
+    subprocess.run(['python', 'multiprocces_images.py'])
+
+else:
+    #we just copy the images to the output folder
+    path_to_segmentation = config['path_to_segmentation']
+    images_folder = os.path.join(path_to_segmentation, "Images")
+
+    for image_path in glob(os.path.join(images_folder, '*.png')):
+        if (check_object_number(image_path) > 0):
+            copy(image_path, os.path.join(destination_folder, os.path.basename(image_path)))
+        else:
+            copy(image_path, os.path.join(destination_folder_empty_images, os.path.basename(image_path)))
+
 
 
 
 print ('Exporting from fornax segmentation of objects and bboxes')
-ue_dict = utils.get_segmentation()
-print (ue_dict)
+ue_dict = utils.get_segmentation() #can be multiproccesed
 json_file_path = 'savedata.json'
 
 # Save the data to a JSON file

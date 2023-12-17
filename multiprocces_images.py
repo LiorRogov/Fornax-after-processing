@@ -13,7 +13,7 @@ f = open('config.json')
 # returns JSON object as 
 config = json.load(f)
 
-def check_object_number(image_path: str):
+def is_there_object_number(image_path: str):
     json_image_path = image_path[:-3] + 'json'
     
     with open(json_image_path) as f:
@@ -23,7 +23,6 @@ def check_object_number(image_path: str):
 
 
 def change_bit_depth(path_image, destination_folder):
-    if (check_object_number(path_image)):
         rgba_image = cv2.imread(path_image, cv2.IMREAD_UNCHANGED)
         # Load the RGBA image using OpenCV
 
@@ -51,20 +50,23 @@ def worker_function(target):
     images_folder = os.path.join(path_to_segmentation, "Images")
 
     destination_folder = os.path.join(config['output_folder'], "Images")
+    destination_folder_empty_images = os.path.join(config['output_folder'], "Empty_Images")
+
     os.makedirs(destination_folder, exist_ok= True)
+    os.makedirs(destination_folder_empty_images, exist_ok= True)
 
     if config['imagery']['bit_depth']['change']:
         print (f"changing bit depth resolution to {config['imagery']['bit_depth']['value']}")
-        for path_image in tqdm(glob(images_folder + '\\*.png')[target[0]: target[1]]):
-            change_bit_depth(path_image, destination_folder)
-
+        for path_image in tqdm(glob(images_folder + '\\*.png')[target[0]: target[1]]):    
+            if is_there_object_number(path_image) > 0:#if image has objects
+                change_bit_depth(path_image, destination_folder)
+            else:
+                change_bit_depth(path_image, destination_folder_empty_images)   
 
 
 if __name__ == '__main__':
     # Get the number of CPU cores available on the system
     num_cores = multiprocessing.cpu_count() - 1
-
-
     
     path_to_segmentation = config['path_to_segmentation']
     images_folder = os.path.join(path_to_segmentation, "Images")
