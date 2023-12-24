@@ -26,8 +26,73 @@ images_folder = os.path.join(path_to_segmentation, "Images")
 masks_folder =  os.path.join(path_to_segmentation, "Masks")
 metadata_name = config['metadata_name']
 metadata_delimiter = config['metadata_delimiter']
-TARGET_DATA_PATH = config['dir_of_objects_info']
+TARGET_DATA_PATH = os.path.join(path_to_segmentation, "TargetsData")
 OUTPUT_FOLDER =  config['output_folder']
+
+def extract_segmentation_mask(mask, contour):
+    # Read the image
+    img = mask
+
+    # Create an empty mask
+    mask = np.zeros(img.shape, dtype=np.uint8)
+
+    # Draw the contour on the visualization image
+    cv2.drawContours(mask, [contour], -1, (255,255,255), thickness= cv2.FILLED)
+    """
+    cv2.imshow('countur mask', mask)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    """
+    returned_mask = np.where(mask > 0, img, mask)
+
+    """
+    cv2.imshow('returned_mask', returned_mask)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    """
+
+    return returned_mask
+
+def get_object_color(mask ,color_array, countour):
+    max_color_segmentation_pixel = 0
+    max_color = []
+    segmentation_mask = extract_segmentation_mask(mask, countour)
+
+    for color in list(color_array):
+        #debug
+        """
+        cv2.imshow('segmentation_mask', segmentation_mask)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        """
+        
+        R, G, B = color
+        BGR = np.array([B, G, R])
+
+        intensity_range = 0.05
+        lower = np.clip(BGR - intensity_range * 255, 0, 255)
+        upper = np.clip(BGR + intensity_range * 255, 0, 255)
+
+        object_mask = cv2.inRange(segmentation_mask, lower, upper)
+
+        count = cv2.countNonZero(object_mask)
+        #debug
+        """
+        cv2.imshow('object_mask', object_mask)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        """
+        
+        if count > max_color_segmentation_pixel:
+            max_color = color
+            max_color_segmentation_pixel = count
+    
+    if max_color == []:
+        return ([])
+    
+    return tuple(max_color)
+
+    
 
 def get_colours():
     """
@@ -53,32 +118,9 @@ def get_colours():
            
     return dict_colours
 
-def find_closest_color(target_color, color_array):
-    """
-    Find the closest color in an array to a target color.
-
-    Parameters:
-    - target_color: The target RGB color as a tuple (R, G, B).
-    - color_array: An array of RGB colors, each represented as a tuple (R, G, B).
-
-    Returns:
-    - The closest color from the array.
-    """
-    target_color = np.array(target_color)
-    color_array = np.array(color_array)
-
-    # Calculate the Euclidean distance between the target color and each color in the array
-    distances = np.linalg.norm(color_array - target_color, axis=1)
-
-    # Find the index of the closest color
-    closest_index = np.argmin(distances)
-
-    # Return the closest color
-    closest_color = color_array[closest_index]
-    return tuple(closest_color.tolist())
-
+"""
 def get_polygons(image_name, dict_colours):
-    """
+   
     Process flat colour images from UE and associated metadata
     and return polygon points and bounding boxes
 
@@ -89,7 +131,7 @@ def get_polygons(image_name, dict_colours):
         split into multiple areas, each of them has a new list with polygon points
     :rtype: list
         structure: [[(x1, y1), (x2, y2),...], [(x1, y1), (x2, y2),...], (bbox), (id, category, area)]
-    """
+  
     list_poly = []
 
     # load the flat coloured mask image
@@ -97,9 +139,8 @@ def get_polygons(image_name, dict_colours):
     mask_name = os.path.join(masks_folder, image_base_name + image_ext)
     
     mask = cv2.imread(mask_name)
-    kernel = np.ones((3,3), np.uint8)
-    dilation = cv2.dilate(mask, kernel, iterations = 1)
-    mask = dilation
+    mask_grayscale = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+
 
 
     # process all colours to find the contours and bounding boxes
@@ -109,7 +150,7 @@ def get_polygons(image_name, dict_colours):
         R, G, B = colour
         BGR = np.array([B, G, R])
         
-        intensity_range = 0.1 # 25% intensity range
+        intensity_range = 0.05
         lower = np.clip(BGR - intensity_range * 255, 0, 255)
         upper = np.clip(BGR + intensity_range * 255, 0, 255)
     
@@ -140,18 +181,82 @@ def get_polygons(image_name, dict_colours):
             contour_area = cv2.contourArea(contour)
 
             #debug
-            """
+        
             cv2.drawContours(object_mask, [rotated_box], 0, (0, 255, 0), 2)  # Draw contours in blue
             cv2.imshow(f'{(R, G, B)}', object_mask)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
-            """
+
 
             list_poly.append([polygon_pixels.tolist(), #segmentation pixels
                             (x, y, w, h), #bounding box
                             dict_colours[colour] + (contour_area,), #mask color and total area in pixels
                             rotated_box.tolist() # rotated bbox
                             ])
+
+    return list_poly
+"""
+def get_polygons(image_name, dict_colours):
+    """
+    Process flat colour images from UE and associated metadata
+    and return polygon points and bounding boxes
+
+    :param str image_name: path to the image
+    :param dictionary dict_colours: colour dictionary
+    :return list_poly: list of polygon points for each object on the image as well as
+        it's bounding box, object id, category and contour total area, if the the object is
+        split into multiple areas, each of them has a new list with polygon points
+    :rtype: list
+        structure: [[(x1, y1), (x2, y2),...], [(x1, y1), (x2, y2),...], (bbox), (id, category, area)]
+    """
+    list_poly = []
+    counter = 0
+    # load the flat coloured mask image
+    image_base_name, image_ext = os.path.splitext(os.path.basename(image_name))
+    mask_name = os.path.join(masks_folder, image_base_name + image_ext)
+    
+    mask = cv2.imread(mask_name)
+    mask_grayscale = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+    
+    # get contours using point approximation
+    #countours = cv2.findContours(object_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
+    countours, _  = cv2.findContours(mask_grayscale, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # add countours to segmentation structure
+    for contour in countours:
+        # Extract polygon pixels
+        polygon_pixels = contour.squeeze()
+       
+        # Calculate bounding box
+        x, y, w, h = cv2.boundingRect(contour)
+
+        # Calculate rotated bounding box
+        rotated_rect = cv2.minAreaRect(contour)
+        rotated_box = cv2.boxPoints(rotated_rect).astype(int)
+
+        # Calculate contour area
+        contour_area = cv2.contourArea(contour)
+
+        #lets try to understand what object it is
+        colour = get_object_color(mask, dict_colours.keys(), contour)
+
+        if colour != []:
+            list_poly.append([polygon_pixels.tolist(), #segmentation pixels
+                            (x, y, w, h), #bounding box
+                            dict_colours[colour] + (contour_area,), #mask color and total area in pixels
+                            rotated_box.tolist() # rotated bbox
+                            ])
+        else:
+            counter+= 1
+            print (counter)
+            
+
+        """
+        cv2.drawContours(object_mask, [rotated_box], 0, (0, 255, 0), 2)  # Draw contours in blue
+        cv2.imshow(f'{(R, G, B)}', object_mask)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        """
 
     return list_poly
 
@@ -166,7 +271,6 @@ def check_object_number(image_path: str):
     
 def get_segmentation():
     failed_folder = os.path.join(OUTPUT_FOLDER, 'Failed_Images')
-    destination_folder_empty_images = os.path.join(config['output_folder'], "Empty_Images")
     os.makedirs(failed_folder, exist_ok= True)
     """
     Get segmentation data for all images in a folder
@@ -195,7 +299,7 @@ def get_segmentation():
             list_poly = get_polygons(image, dict_colours)
             if list_poly:
                 dict_segmentation[image] = list_poly
-    
+
             else: #although the image has objects, it failed to recognize them...
                 list_failed.append(image)
                 print("No Segmentation found in image " + str(image))
@@ -203,7 +307,10 @@ def get_segmentation():
                 #remove failed images from output images folder
                 #remove from folder:
                 folder = os.path.join(OUTPUT_FOLDER, 'Images')
-                os.remove(os.path.join(folder, os.path.basename(image))) #removing failed images from output
+                try:
+                    os.remove(os.path.join(folder, os.path.basename(image))) #removing failed images from output
+                except:
+                    pass
         
     table = {'path_list': list_failed}
     with open(os.path.join(OUTPUT_FOLDER, 'failed_images.json'), 'w') as outfile:

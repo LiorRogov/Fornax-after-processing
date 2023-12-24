@@ -41,6 +41,8 @@ if config['imagery']['bit_depth']['change']:
     subprocess.run(['python', 'multiprocces_images.py'])
 
 else:
+    pass
+    """
     #we just copy the images to the output folder
     path_to_segmentation = config['path_to_segmentation']
     images_folder = os.path.join(path_to_segmentation, "Images")
@@ -50,7 +52,7 @@ else:
             copy(image_path, os.path.join(destination_folder, os.path.basename(image_path)))
         else:
             copy(image_path, os.path.join(destination_folder_empty_images, os.path.basename(image_path)))
-
+    """
 
 
 

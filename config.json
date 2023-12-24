@@ -1,14 +1,13 @@
 {
-    "path_to_segmentation" : "F:\\FORNAX\\Ogen_mwir_vehicles_19_11_2024\\Ogen",
-    "dir_of_objects_info": "F:\\FORNAX\\Ogen_mwir_vehicles_19_11_2024\\TargetsData",
+    "path_to_segmentation" : "G:\\FORNAX\\20K\\Ogen_13_12_2023",
     "metadata_name" : "Segmentation.csv",
     "metadata_delimiter" : "-",
     
-    "output_folder" : "C:\\Users\\liorr\\Desktop\\added_images",
+    "output_folder" : "C:\\Users\\Simlat\\Desktop\\output_fornax_2\\20K",
     
     "export": 
     {
-        "coco": false,
+        "coco": true,
         "custom": true
     },
     
@@ -16,7 +15,7 @@
     {
         "bit_depth": 
         {
-            "change": false,
+            "change": true,
             "value": 16
         }
     }

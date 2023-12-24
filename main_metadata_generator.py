@@ -8,6 +8,7 @@ import json
 import pandas
 from tqdm import tqdm 
 import glob
+import images_with_no_object_handeler as images_with_no_objects
 
 # Opening JSON file
 f = open('config.json')
@@ -17,6 +18,10 @@ config = json.load(f)
 # file save name
 json_name = "metadata.json"
 dataset_version_number = "1.1"
+OUTPUT_FOLDER =  config['output_folder']
+IMAGES_OUTPUT_FOLDER = os.path.join(OUTPUT_FOLDER, 'Images')
+EMPTY_OUTPUT_IMAGES = os.path.join(OUTPUT_FOLDER, 'Empty_Images')
+
 
 def count_frames():
     num_of_frames = 0
@@ -36,7 +41,7 @@ def get_empty_json_format(annotation : bool = True ):
                 "year": datetime.now().year,
                 "generated_by": "Simlat",
                 "date_created": datetime.today().strftime("%Y/%m/%d"),
-                "number_of_frames": count_frames()
+                "number_of_frames": len(glob.glob(os.path.join(IMAGES_OUTPUT_FOLDER, '*.png')))
             },
             "models_list": [],
             "images": [],
@@ -53,7 +58,7 @@ def get_empty_json_format(annotation : bool = True ):
             "year": datetime.now().year,
             "generated_by": "Simlat",
             "date_created": datetime.today().strftime("%Y/%m/%d"),
-            "number_of_frames": count_frames()
+            "number_of_frames": len(glob.glob(os.path.join(EMPTY_OUTPUT_IMAGES, '*.png')))
         },
         "models_list": [],
         "images": [],
@@ -291,7 +296,7 @@ def make_annotations(json_dict, ue_dict):
 
 def generate_data(ue_dict):
     """
-    Create json in Custom format for all images\
+    Create json in Custom format for all images
     """
     directory = config['output_folder']
     metadata_folder = "Metadata"
@@ -305,16 +310,10 @@ def generate_data(ue_dict):
     json_dict["annotations"] = make_annotations(json_dict, ue_dict)
     #json_dict["models_list"] = make_model_list(ue_dict)
 
-    #create json for images with no objects if there are images with no objects
-    if os.listdir(os.path.join(directory, "Empty_Images")):
-        json_no_annotation_images =  get_empty_json_format(annotation = False)
-        json_no_annotation_images["images"] = get_image_data_with_no_objects(ue_dict)
-       
-        with open(os.path.join(final_directory, 'images_with_no_objects.json'), 'w') as outfile:
-            json.dump(json_no_annotation_images, outfile, indent=4)
-        
     with open(os.path.join(final_directory, json_name), 'w') as outfile:
         json.dump(json_dict, outfile, indent=4)
+
+    images_with_no_objects.create_json_file_for_empty_images(ue_dict)
 
     print(f"Exported Metadata json file in Simlat Fornax format to {os.path.join(final_directory, json_name)}")
 

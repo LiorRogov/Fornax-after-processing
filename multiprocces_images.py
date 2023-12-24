@@ -23,26 +23,26 @@ def is_there_object_number(image_path: str):
 
 
 def change_bit_depth(path_image, destination_folder):
-        rgba_image = cv2.imread(path_image, cv2.IMREAD_UNCHANGED)
-        # Load the RGBA image using OpenCV
-
-        gray_image = cv2.cvtColor(rgba_image, cv2.COLOR_RGBA2GRAY)
-        # Convert the RGBA image to grayscale (one band)
-
-        gray_image_16bit = (gray_image.astype(np.uint16) << 8)
-        # The line above left-shifts the 8-bit grayscale values by 8 bits to convert it to 16-bit.
-        # This effectively fills the additional 8 bits with zeros, expanding the bit depth.
-        
-        gray_image_16bit_pil = Image.fromarray(gray_image_16bit)
-        # Create a 16-bit grayscale image using PIL
-
         destination_filepath = os.path.join(destination_folder, os.path.splitext(os.path.basename(path_image))[0] + '.png')
-        #creating file path in the 'destination folder'
+        if not os.path.exists(destination_filepath):
+            #creating file path in the 'destination folder'
+            rgba_image = cv2.imread(path_image, cv2.IMREAD_UNCHANGED)
+            # Load the RGBA image using OpenCV
 
-        #gray_image_16bit_pil.save(destination_filepath, "JPEG2000" , bits = 16)
-        gray_image_16bit_pil.save(destination_filepath, bits = 16) 
-        # This line saves the 16-bit grayscale image as a png file with 16 bits per sample.
-        # The "bits=16" argument ensures that the image is saved with a 16-bit depth.
+            gray_image = cv2.cvtColor(rgba_image, cv2.COLOR_RGBA2GRAY)
+            # Convert the RGBA image to grayscale (one band)
+
+            gray_image_16bit = (gray_image.astype(np.uint16) << 8)
+            # The line above left-shifts the 8-bit grayscale values by 8 bits to convert it to 16-bit.
+            # This effectively fills the additional 8 bits with zeros, expanding the bit depth.
+            
+            gray_image_16bit_pil = Image.fromarray(gray_image_16bit)
+            # Create a 16-bit grayscale image using PIL
+
+            #gray_image_16bit_pil.save(destination_filepath, "JPEG2000" , bits = 16)
+            gray_image_16bit_pil.save(destination_filepath, bits = 16) 
+            # This line saves the 16-bit grayscale image as a png file with 16 bits per sample.
+            # The "bits=16" argument ensures that the image is saved with a 16-bit depth.
         
 
 def worker_function(target):
