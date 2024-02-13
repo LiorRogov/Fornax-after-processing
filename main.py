@@ -64,6 +64,8 @@ json_file_path = 'savedata.json'
 with open(json_file_path, 'w') as json_file:
     json.dump(ue_dict, json_file)
 
+
+
 if config['export']['coco']:
     #crate and export data in coco format (There is no support for rotated bounding boxes, the format itself does not support it)
     coco.generate_dada(ue_dict)

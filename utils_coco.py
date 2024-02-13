@@ -14,10 +14,13 @@ import json
 import shutil 
 import os
 
+
 # Opening JSON file
 f = open('config.json')
 # returns JSON object as 
 config = json.load(f)
+
+
 
 is_debug = False
 path_to_segmentation = config['path_to_segmentation']
@@ -238,7 +241,7 @@ def get_polygons(image_name, dict_colours):
         contour_area = cv2.contourArea(contour)
 
         #lets try to understand what object it is
-        colour = get_object_color(mask, dict_colours.keys(), contour)
+        colour , pixel_count = get_object_color(mask, dict_colours.keys(), contour)
 
         if colour != []:
             list_poly.append([polygon_pixels.tolist(), #segmentation pixels
@@ -317,3 +320,5 @@ def get_segmentation():
         json.dump(table, outfile, indent=4)
 
     return dict_segmentation
+
+

@@ -1,9 +1,9 @@
 {
-    "path_to_segmentation" : "G:\\FORNAX\\20K\\Ogen_13_12_2023",
+    "path_to_segmentation" : "C:\\Users\\Simlat\\Desktop\\FORNAX\\20K\\Ogen_13_12_2023",
     "metadata_name" : "Segmentation.csv",
     "metadata_delimiter" : "-",
     
-    "output_folder" : "C:\\Users\\Simlat\\Desktop\\output_fornax_2\\20K",
+    "output_folder" : "C:\\Users\\Simlat\\Desktop\\FORNAX\\20K\\Ogen_13_12_2023\\output_un_vehicle",
     
     "export": 
     {
@@ -15,7 +15,7 @@
     {
         "bit_depth": 
         {
-            "change": true,
+            "change": false,
             "value": 16
         }
     }
